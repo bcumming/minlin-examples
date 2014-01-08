@@ -1,0 +1,9 @@
+to build:
+> make driver
+
+to run:
+> aprun ./driver
+
+the driver will load a matrix in test.mtx (has to be symmetric matrix market format). At the moment we have a small matrix, which won't utilize the GPU very effectively.
+
+currently only nvcc can be used to compile (for both the host and device targets). To test the OpenMP backend for Thrust I want to use g++, however I haven't been able to do this after a bit of playing around (problems with __device__ etc in the header files, that I need a bit longer to get to the bottom of).
