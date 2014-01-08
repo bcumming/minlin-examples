@@ -1,0 +1,12 @@
++ fix up the error estimation
++ wrap up in a function
++ make sure it works for both single and double
+- make it run with OpenMP
+    - having problems with the 
+- make a cublas handle singleton
+    - this needs some careful thought before implementation.
+    - needs to be included as part of minlin.
+- generalize BLAS level 2 and level 3 expressions into expression templates that call appropriate MKL/CUBLAS routines
+    + done for matrix-vector multiply in development branch of minlin
+    - have to add sub-matrix and strided vector references for gemv
+    - have to add gemm functionality (should be straightforward given gemv implementation
