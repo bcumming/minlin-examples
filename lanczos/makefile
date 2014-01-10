@@ -1,15 +1,16 @@
-all : matrix lanczos
-# rand
+all : driver
 
+# set up system-specific settings
+# SANTIS
+MINLINROOT=/scratch/daint/bcumming/will/minlin/include
 MKLROOT=/opt/intel/13.1.0.146/composer_xe_2013.2.146/mkl
+GPP=/opt/gcc/4.8.1/bin/g++
 
 MKLLIBS=-L$(MKLROOT)/lib/intel64 -lmkl_gnu_thread -lmkl_core -lmkl_rt
 CUDALIBS=-lcublas
 LIBS=$(MKLLIBS) $(CUDALIBS)
 
-INCLUDE=-I/scratch/santis/bcumming/minlin/release/include -I$(MKLROOT)/include
-
-GPP=/opt/gcc/4.8.1/bin/g++
+INCLUDE=-I$(MINLINROOT) -I$(MKLROOT)/include
 
 ARGS=-DUSE_GPU
 #ARGS=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
