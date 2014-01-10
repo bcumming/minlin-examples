@@ -119,10 +119,8 @@ bool lanczos
 
         if ( j >= ne ) {
             // find eigenvectors/eigenvalues for the reduced triangular system
-            //HostMatrix<real> Tsub = T(0,j-1,0,j-1);
-            //HostMatrix<real> UVhost(j,ne);
-            HostMatrix<real> Tsub = T(0,j,0,j); //HACK
-            HostMatrix<real> UVhost(j+1,ne); //HACK
+            HostMatrix<real> Tsub = T(0,j,0,j);
+            HostMatrix<real> UVhost(j+1,ne);
             assert( geev<real>(Tsub, UVhost, er, ei, ne) );
 
             // copy eigenvectors for reduced system to the device
@@ -142,8 +140,7 @@ bool lanczos
             // find EV = V(:,0:j-1)*UV
             assert(
                 gemm_wrapper(
-                    N, ne, j+1, //HACK
-                    //N, ne, j,
+                    N, ne, j+1,
                     V.pointer(), V.rows(),
                     UV.pointer(), UV.rows(),
                     EV.pointer(), EV.rows(),
