@@ -117,15 +117,14 @@ bool lanczos
             // copy eigenvectors for reduced system to the device
             ////////////////////////////////////////////////////////////////////
             // TODO : can we find a way to allocate memory for UV outside the
-            //        inner loop? this memory allocation is probably killing us
-            //        particularly if we go to large subspace sizes
+            //        inner loop?
             //
-            // TODO : additionally, for large subspaces the overhead of copying
-            //        from host to device increases significantly. It might be
-            //        possible to overlap communication with residual estimation
-            //        if this proves to be a problem. We could copy one vector
-            //        over at a time, and start computing it's residual while
-            //        the next vector is being copied.
+            //        dimensions of UV are (j+1, ne)
+            //        ne is typically 1-5, so this won't ever be that large
+            //
+            //        first tests with nvprof suggest that the malloc-free
+            //        on the device from the line below are not causing very
+            //        high overhead, but have to keep an eye on this
             ////////////////////////////////////////////////////////////////////
             Matrix<real> UV = UVhost;
             // find EV = V(:,0:j-1)*UV

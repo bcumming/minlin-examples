@@ -47,8 +47,8 @@ int main(void)
 
     // iteration parameters
     real tol = 1.0e-5;
-    bool reorthogonalize = true;
-    int ne = 2;
+    bool reorthogonalize = false;
+    int ne = 4;
     int max_iter = 100;
 
     // create storage for eigenpairs
