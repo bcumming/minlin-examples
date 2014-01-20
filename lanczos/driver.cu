@@ -16,6 +16,8 @@ using namespace minlin::threx; // just dump the namespace for this example
 #include "utilities.h"
 #include "lanczos.h"
 
+MINLIN_INIT
+
 /*******************************************************************************
   Driver for Lanczos example
 
