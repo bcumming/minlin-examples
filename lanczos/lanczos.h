@@ -69,11 +69,8 @@ bool lanczos
     V(all,0) = real(1.);
     V(all,0) /= norm(V(all,0));    // Unit vector
 
-    //std::cout << "V1" << V;
-
     // find product w=A*V(:,0)
-    Vector w(A.rows());
-    gemv_wrapper(w.pointer(), V.pointer(), A, 1., 0., handle);
+    Vector w = A*V(all,0);
     delta = dot(w, V(all,0));
     T(0,0) = delta; // store in tridiagonal matrix
 
@@ -83,12 +80,6 @@ bool lanczos
     // main loop, will terminate earlier if tolerance is reached
     bool converged = false;
     for(int j=1; j<min(m, N) && !converged; ++j) {
-        ////// timing logic //////
-        //#ifdef USE_GPU
-        //cudaDeviceSynchronize();
-        //#endif
-        //double time = -omp_get_wtime();
-        //////////////////////////
         //std::cout << "================= ITERATION " << j << "    ";
         if ( j == 1 )
             w -= delta*V(all,j-1);
@@ -111,7 +102,7 @@ bool lanczos
         T(j  ,j-1) = gamma;
 
         // find matrix-vector product for next iteration
-        gemv_wrapper(w.pointer(), V.pointer()+N*j, A, 1., 0., handle);
+        w(all) = A*V(all,j);
 
         // update diagonal of tridiagonal system
         delta = dot(w, V(all,j));
@@ -153,7 +144,7 @@ bool lanczos
                 real this_eig = er(count);
 
                 // find the residual
-                gemv_wrapper(r.pointer(), EV.pointer()+N*count, A, 1., 0., handle);
+                r(all) = A*EV(all,count);
 
                 // compute the relative error from the residual
                 real this_err = abs( norm(r-this_eig*EV(all,count)) / this_eig );
@@ -168,13 +159,6 @@ bool lanczos
             if(max_err < tol)
                 converged = true;
         } // end-if estimate eigenvalues
-        ////// timing logic //////
-        #ifdef USE_GPU
-        //cudaDeviceSynchronize();
-        #endif
-        //time += omp_get_wtime();
-        //std::cout << "took " << time*1000. << " miliseconds" << std::endl;
-        //////////////////////////
     } // end-for main
 
     // return failure if no convergence
