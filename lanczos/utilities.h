@@ -1,26 +1,10 @@
 #pragma once
 
-// include minlin stuff
-#include <minlin/minlin.h>
-#include <minlin/modules/threx/threx.h>
-using namespace minlin::threx; // just dump the minlin namespace
-
 // blas routines for cuda and mkl
-#include <cublas_v2.h>
 #include <mkl.h>
 
-/************************************************************************
-  Wrappers for BLAS level 2 and level 3 operations
+#include <sstream>
 
-  For each operation (gemv, saxpy, etc...) we have four versions
-    - device float
-    - device double
-    - host float
-    - host double
-
-  The host and device implementations are taken from MKL and CUBLAS
-  respectively
- ************************************************************************/
 template <typename T>
 void matlab_vector(const DeviceVector<T> &v, const char *name ) {
     std::cout << name << " = [";
@@ -29,140 +13,115 @@ void matlab_vector(const DeviceVector<T> &v, const char *name ) {
     std::cout << "]';" << std::endl;
 }
 
-// double precision gemv
-// y <- alpha*A*x + beta*y
-bool gemv_wrapper(
-    double* y,
-    const double* x,
-    #ifdef USE_GPU
-    const DeviceMatrix<double> &A,
-    #else
-    const HostMatrix<double> &A,
-    #endif
-    double alpha,
-    double beta,
-    cublasHandle_t handle)
-{
-    int inc(1);
-    #ifdef USE_GPU
-    cublasStatus_t status = cublasDgemv(
-            handle, CUBLAS_OP_N,
-            A.rows(), A.cols(),
-            &alpha, A.pointer(), A.rows(),
-            x, inc,
-            &beta, y, inc);
-    return (status==CUBLAS_STATUS_SUCCESS);
-    #else
-    char trans = 'N';
-    int m = A.rows();
-    int n = A.cols();
-    int lda = m;
-    dgemv(&trans, &m, &n, &alpha, A.pointer(), &lda, const_cast<double*>(x), &inc, &beta, y, &inc);
-    return true;
-    #endif
-}
+struct Params {
+    std::string fname;
+    double tol;
+    int iters;
+    bool reorthogonalize;
+    int num_eigs;
 
-// double precision gemm
-// C = alpha*A*B + beta*C;
-// output matrix C has dimension m*n
-// input  matrix A has dimension m*k
-// input  matrix B has dimension k*n
-bool gemm_wrapper(
-    int m, int n, int k,
-    const double* A, int lda,
-    const double* B, int ldb,
-    double* C, int ldc,
-    double alpha, double beta,
-    cublasHandle_t handle)
-{
-    #ifdef USE_GPU
-    cublasStatus_t status =
-        cublasDgemm(
-            handle, CUBLAS_OP_N, CUBLAS_OP_N,
-            m, n, k,
-            &alpha, A, lda,
-            B, ldb,
-            &beta, C, ldc
-        );
-    return (status==CUBLAS_STATUS_SUCCESS);
-    #else
-    char trans = 'N';
-    dgemm(&trans, &trans, &m, &n, &k, &alpha, const_cast<double*>(A), &lda, const_cast<double*>(B), &ldb, &beta, C, &ldc);
-    return true;
-    #endif
-}
+    Params(int argc, char** argv)
+    :   tol(1.e-7),
+        iters(100),
+        reorthogonalize(false),
+        num_eigs(1)
+    {
+        std::string error_string;
+        bool fileset = false;
 
-// single precision gemv
-bool gemv_wrapper (
-    float* y,
-    const float* x,
-    const DeviceMatrix<float> &A,
-    float alpha,
-    float beta,
-    cublasHandle_t handle)
-{
-    int inc = 1;
-    cublasStatus_t status = cublasSgemv(
-            handle, CUBLAS_OP_N,
-            A.rows(), A.cols(),
-            &alpha, A.pointer(), A.rows(),
-            x, inc,
-            &beta, y, inc);
-    return (status==CUBLAS_STATUS_SUCCESS);
-}
+        for(int i=0; i<argc; i++) {
+            std::string arg(argv[i]);
 
-// single precision gemm
-// C = alpha*A*B + beta*C;
-// output matrix C has dimension m*n
-// input  matrix A has dimension m*k
-// input  matrix B has dimension k*n
-bool gemm_wrapper(
-    int m, int n, int k,
-    const float* A, int lda,
-    const float* B, int ldb,
-    float* C, int ldc,
-    float alpha, float beta,
-    cublasHandle_t handle)
-{
-    #ifdef USE_GPU
-    cublasStatus_t status =
-        cublasSgemm(
-            handle, CUBLAS_OP_N, CUBLAS_OP_N,
-            m, n, k,
-            &alpha, A, lda,
-            B, ldb,
-            &beta, C, ldc
-        );
-    return (status==CUBLAS_STATUS_SUCCESS);
-    #else
-    char trans = 'N';
-    sgemm(&trans, &trans, &m, &n, &k, &alpha, const_cast<float*>(A), &lda, const_cast<float*>(B), &ldb, &beta, C, &ldc);
-    return true;
-    #endif
-}
+            if( arg == "-r" ) {
+                reorthogonalize = true;
+            }
+            else if( arg == "-f" ) {
+                i++;
+                if(i<argc && argv[i][0]!='-'){
+                    fname = argv[i];
+                    fileset = true;
+                }
+                else {
+                    error_string += "error: invalid value for input file, must have form -t <char[]>, e.g.: -f file.mtx\n";
+                }
+            }
+            else if( arg == "-t" ) {
+                i++;
+                if(i<argc && argv[i][0]!='-') {
+                    std::istringstream(argv[i]) >> tol;
+                }
+                else {
+                    error_string += "error: invalid value for tolerance, must have form -t <double>, e.g.: -t 1.0e-5\n";
+                }
+            }
+            else if( arg == "-n" ) {
+                i++;
+                if(i<argc && argv[i][0]!='-') {
+                    std::istringstream(argv[i]) >> num_eigs;
+                }
+                else {
+                    error_string += "error: invalid value for number of eigenvalues, must have form -n <int>, e.g.: -n 2\n";
+                }
+            }
+            else if( arg == "-i" ) {
+                i++;
+                if(i<argc && argv[i][0]!='-') {
+                    std::istringstream(argv[i]) >> iters;
+                }
+                else {
+                    error_string += "error: invalid value for max iterations, must have form -i <unsigned int>, e.g.: -i 30\n";
+                }
+            }
+        }
+
+        if(error_string.size() || !fileset) {
+            if(error_string.size())
+                std::cerr << error_string;
+            std::cerr << "usage : driver args" << std::endl;
+            std::cerr << "arguments can be:" << std::endl;
+            std::cerr << "  -f <string>     mandatory" << std::endl;
+            std::cerr << "      filename for matrix market file" << std::endl;
+            std::cerr << "  -i <int>        default 100" << std::endl;
+            std::cerr << "      maximum number of iterations" << std::endl;
+            std::cerr << "  -t <float>      default 1e-7" << std::endl;
+            std::cerr << "      tolerance" << std::endl;
+            std::cerr << "  -n <int>        default 1" << std::endl;
+            std::cerr << "      number of eigenpairs to compute" << std::endl;
+            exit(1);
+        }
+    }
+
+    void print() {
+        std::cout << "=====================================================" << std::endl;
+        std::cout << "input file        :   " << fname << std::endl;
+        std::cout << "tolerance         :   " << tol << std::endl;
+        std::cout << "input file        :   " << iters << std::endl;
+        std::cout << "reorthogonalize   :   " << (reorthogonalize==true ? "yes" : "no") << std::endl;
+        std::cout << "eigenvalues       :   " << num_eigs << std::endl;
+        std::cout << "=====================================================" << std::endl;
+    }
+};
 
 lapack_int tgeev(lapack_int n, lapack_int lda, double* A, double* ER, double* EI, double* VL, double* VR)
 {
     return LAPACKE_dgeev
-    (
-        LAPACK_COL_MAJOR, 'N', 'V',
-        n, A, lda,
-        ER, EI,
-        VL, n, VR, n
-    );
+        (
+         LAPACK_COL_MAJOR, 'N', 'V',
+         n, A, lda,
+         ER, EI,
+         VL, n, VR, n
+        );
 }
 lapack_int tgeev(lapack_int n, lapack_int lda, float* A, float* ER, float* EI, float* VL, float* VR)
 {
     return LAPACKE_sgeev
-    (
-        LAPACK_COL_MAJOR, 'N', 'V',
-        n, A, lda,
-        ER, EI,
-        VL, n, VR, n
-    );
+        (
+         LAPACK_COL_MAJOR, 'N', 'V',
+         n, A, lda,
+         ER, EI,
+         VL, n, VR, n
+        );
 }
-
-
 
 // double precision generalized eigenvalue problem (host!)
 // only returns the right-eigenvectors
@@ -170,13 +129,13 @@ lapack_int tgeev(lapack_int n, lapack_int lda, float* A, float* ER, float* EI, f
 //       dstev/sstev
 template <typename real>
 bool geev (
-    HostMatrix<real> &A,  // nxn input matrix
-    HostMatrix<real> &V,  // nxn output matrix for eigenvectors
-    HostVector<real> &er, // output for real component of eigenvalues
-    HostVector<real> &ei, // output for imaginary compeonent of eigenvalues
-    int find_max=0          // if >0, sort the eigenvalues, and sort the
-                            // corresponding find_max eigenvections
-)
+        HostMatrix<real> &A,  // nxn input matrix
+        HostMatrix<real> &V,  // nxn output matrix for eigenvectors
+        HostVector<real> &er, // output for real component of eigenvalues
+        HostVector<real> &ei, // output for imaginary compeonent of eigenvalues
+        int find_max=0          // if >0, sort the eigenvalues, and sort the
+        // corresponding find_max eigenvections
+        )
 {
     //std::cout << "calling geev wrapper routine for " << traits<real>::print_type() << std::endl;
     //std::cout << "sizeof(real) " << sizeof(real) << std::endl;
@@ -246,26 +205,5 @@ bool geev (
 
     // return bool indicating whether we were successful
     return result==0; // LAPACKE_dgeev() returns 0 on success
-}
-
-/************************************************************************
-  CUBLAS helpers
- ************************************************************************/
-// initialize cublas
-static cublasHandle_t init_cublas() {
-    cublasHandle_t handle;
-    cublasStatus_t stat = cublasCreate(&handle);
-
-    if (stat != CUBLAS_STATUS_SUCCESS) {
-        std::cerr << "CUBLAS initialization failed" << std::endl;
-        exit(1);
-    }
-
-    return handle;
-}
-
-// kill cublas
-static void kill_cublas(cublasHandle_t handle) {
-    cublasDestroy(handle);
 }
 

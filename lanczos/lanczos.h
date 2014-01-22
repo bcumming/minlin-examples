@@ -34,7 +34,6 @@ bool lanczos
     real tol,
     std::vector<real> &e,
     Matrix<real> EV,
-    cublasHandle_t handle,
     bool reorthogonalize=false
 )
 {
@@ -115,28 +114,10 @@ bool lanczos
             assert( geev<real>(Tsub, UVhost, er, ei, ne) );
 
             // copy eigenvectors for reduced system to the device
-            ////////////////////////////////////////////////////////////////////
-            // TODO : can we find a way to allocate memory for UV outside the
-            //        inner loop?
-            //
-            //        dimensions of UV are (j+1, ne)
-            //        ne is typically 1-5, so this won't ever be that large
-            //
-            //        first tests with nvprof suggest that the malloc-free
-            //        on the device from the line below are not causing very
-            //        high overhead, but have to keep an eye on this
-            ////////////////////////////////////////////////////////////////////
             Matrix<real> UV = UVhost;
-            // find EV = V(:,0:j-1)*UV
-            assert(
-                gemm_wrapper(
-                    N, ne, j+1,
-                    V.pointer(), V.rows(),
-                    UV.pointer(), UV.rows(),
-                    EV.pointer(), EV.rows(),
-                    real(1.0), real(0.0), handle
-                )
-            );
+
+            // find approximate eigenvectors of full system
+            EV = V(all,0,j)*UV;
 
             real max_err = 0.;
             for(int count=0; count<ne && !converged; count++){
