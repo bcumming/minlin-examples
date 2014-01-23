@@ -1,10 +1,11 @@
 #pragma once
 
-// blas routines for cuda and mkl
 #include <mkl.h>
+#include <minlin/minlin.h>
+#include <minlin/modules/threx/threx.h>
+using namespace minlin::threx; // just dump the namespace for this example
 
-#include <sstream>
-
+/*
 template <typename T>
 void matlab_vector(const DeviceVector<T> &v, const char *name ) {
     std::cout << name << " = [";
@@ -12,6 +13,7 @@ void matlab_vector(const DeviceVector<T> &v, const char *name ) {
         std::cout << v(i) << " ";
     std::cout << "]';" << std::endl;
 }
+*/
 
 lapack_int tgeev(lapack_int n, lapack_int lda, double* A, double* ER, double* EI, double* VL, double* VR)
 {

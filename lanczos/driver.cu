@@ -28,8 +28,8 @@ typedef MatrixXX GenericMatrix;
 // include minlin stuff
 #include <minlin/minlin.h>
 #include <minlin/modules/threx/threx.h>
-#include "tge_wrappers.h"
 using namespace minlin::threx; // just dump the namespace for this example
+#include "tge_wrappers.h"
 #include "lanczos.h"
 // include cuda blas implementation
 #include <cublas_v2.h>

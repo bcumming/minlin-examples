@@ -138,6 +138,7 @@ bool lanczos_eigen
             // test for convergence
             if(max_err < tol) {
 	      // pack the eigenvalues into user-provided vector
+	      e.resize(ne);
 	      std::copy(eigs.data(), eigs.data()+ne, e.begin());
 	      converged = true;
 	    }
