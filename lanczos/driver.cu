@@ -1,22 +1,42 @@
 #include <iostream>
 #include <limits>
+#include <vector>
 
-// include minlin stuff
-#include <minlin/minlin.h>
-#include <minlin/modules/threx/threx.h>
-using namespace minlin::threx; // just dump the namespace for this example
+typedef double ScalarType;
 
-// include cuda and mkl blas implementations
-#include <cublas_v2.h>
+// include mkl blas implementations
 #include <mkl.h>
 
 // required to read matrix market files
 #include "mm_matrix.h"
 
+// Generic utilities needed for all versions
 #include "utilities.h"
+
+#if defined(EIGEN)
+
+// include eigen stuff
+#include <Eigen/Dense>
+using namespace Eigen;
+typedef Matrix<ScalarType, Dynamic, Dynamic, ColMajor> MatrixXX;
+typedef Matrix<ScalarType, Dynamic, 1> VectorX;
+typedef MatrixXX GenericMatrix;
+#include "lanczos_eigen.h"
+
+#else
+
+// include minlin stuff
+#include <minlin/minlin.h>
+#include <minlin/modules/threx/threx.h>
+#include "tge_wrappers.h"
+using namespace minlin::threx; // just dump the namespace for this example
 #include "lanczos.h"
+// include cuda blas implementation
+#include <cublas_v2.h>
 
 MINLIN_INIT
+
+#endif
 
 /*******************************************************************************
   Driver for Lanczos example
@@ -25,7 +45,6 @@ MINLIN_INIT
 *******************************************************************************/
 int main(int argc, char* argv[])
 {
-    typedef double real;
 
     Params params(argc-1, argv+1);
     params.print();
@@ -37,32 +56,45 @@ int main(int argc, char* argv[])
     #endif
 
     // load matrix from file
-    mm_matrix<real> mat(params.fname);
+    mm_matrix<ScalarType> mat(params.fname);
     // print matrix info to screen
     mat.stats();
 
-    HostMatrix<real> A_host(mat.rows(),mat.cols());
+#if defined( EIGEN )
+    // initilize eigen implementation
+    MatrixXX A( mat.rows(), mat.cols() );
+    mat.to_dense( A.data(), false );
+    MatrixXX V(A.rows(), params.num_eigs);
+    const int handle = -1;  //dummy handle
+#else
+    // copy over to the device
+
+    HostMatrix<ScalarType> A_host(mat.rows(),mat.cols());
     mat.to_dense(A_host.pointer(), false);
 
-    // copy over to the device
     #ifdef USE_GPU
-    DeviceMatrix<real> A = A_host;
+    DeviceMatrix<ScalarType> A = A_host;
     #else
-    HostMatrix<real> A = A_host;
+    HostMatrix<ScalarType> A = A_host;
     #endif
 
     // create storage for eigenpairs
     #ifdef USE_GPU
-    DeviceMatrix<real> V(A.rows(), params.num_eigs);
+    DeviceMatrix<ScalarType> V(A.rows(), params.num_eigs);
     #else
-    HostMatrix<real> V(A.rows(), params.num_eigs);
+    HostMatrix<ScalarType> V(A.rows(), params.num_eigs);
     #endif
-    std::vector<real> eigs;
+#endif
+    std::vector<ScalarType> eigs;
 
     // call lanczos routine
 
     double time = -omp_get_wtime();
+#if defined( EIGEN )
+    bool success = lanczos_eigen(A, params.num_eigs, params.iters, params.tol, eigs, V, params.reorthogonalize);
+#else
     bool success = lanczos(A, params.num_eigs, params.iters, params.tol, eigs, V, params.reorthogonalize);
+#endif
     time += omp_get_wtime();
     std::cout << "======= took " << time*1000. << " miliseconds" << std::endl;
 

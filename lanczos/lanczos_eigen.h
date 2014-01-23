@@ -1,9 +1,5 @@
 #pragma once
 
-// include cuda and mkl blas implementations
-#include <cublas_v2.h>
-#include <mkl.h>
-
 #include <omp.h>
 
 #include <Eigen/Dense>

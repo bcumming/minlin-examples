@@ -20,11 +20,11 @@ LIBS=$(MKLLIBS) $(CUDALIBS)
 
 INCLUDE=-I$(MINLINROOT) -I$(MKLROOT)/include -I$(BOOSTROOT) -I$(EIGENROOT)
 
-ARGS=-DUSE_GPU -g
+ARGS=-g
 #ARGS=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 
 driver: driver.cu utilities.h lanczos.h
-	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver -ccbin=$(GPP) --compiler-options "-fopenmp" $(INCLUDE) $(LIBS) $(ARGS)
+	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver -ccbin=$(GPP) --compiler-options "-fopenmp" $(INCLUDE) $(LIBS) $(ARGS) -DUSE_GPU
 #	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver -ccbin=$(GPP) --compiler-options "-fopenmp -pg" $(INCLUDE) $(LIBS) $(ARGS)
 
 driver_host: driver.cu utilities.h lanczos.h
