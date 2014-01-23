@@ -8,6 +8,7 @@ GPP=/cm/shared/apps/gcc/4.7.1/bin/g++
 BOOSTROOT=/users/bcumming/repos/boost_1_49_0
 
 # SANTIS
+EIGENROOT=/users/wsawyer/Software/USI_COMPRESSION/usi_compression/cxx/eigen
 MINLINROOT=/scratch/santis/bcumming/github/minlin/include
 MKLROOT=/opt/intel/13.1.0.146/composer_xe_2013.2.146/mkl
 GPP=/opt/gcc/4.8.1/bin/g++
@@ -17,7 +18,7 @@ MKLLIBS=-L$(MKLROOT)/lib/intel64 -lmkl_gnu_thread -lmkl_core -lmkl_rt
 CUDALIBS=-lcublas
 LIBS=$(MKLLIBS) $(CUDALIBS)
 
-INCLUDE=-I$(MINLINROOT) -I$(MKLROOT)/include -I${BOOSTROOT}
+INCLUDE=-I$(MINLINROOT) -I$(MKLROOT)/include -I$(BOOSTROOT) -I$(EIGENROOT)
 
 ARGS=-DUSE_GPU -g
 #ARGS=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
@@ -29,6 +30,8 @@ driver: driver.cu utilities.h lanczos.h
 driver_host: driver.cu utilities.h lanczos.h
 	g++ driver.cpp mmio.cpp -o driver -fopenmp $(INCLUDE) $(LIBS) $(ARGS) -I/opt/nvidia/cudatoolkit/5.5.20-1.0501.7700.8.1/include/
 
+driver_eigen: driver.cpp driver.cu utilities.h lanczos_eigen.h
+	g++ driver.cpp mmio.cpp -o driver_eigen -fopenmp -DEIGEN $(INCLUDE) $(EIGENLIBS) $(ARGS) -I/opt/nvidia/cudatoolkit/5.5.20-1.0501.7700.8.1/include/
 
 clean :
 	rm -f driver driver_host
