@@ -6,7 +6,7 @@
 using namespace minlin::threx; // just dump the namespace for this example
 
 // include cuda and mkl blas implementations
-#include <cublas_v2.h>
+//#include <cublas_v2.h>
 #include <mkl.h>
 
 #include "utilities.h"
@@ -51,8 +51,6 @@ bool lanczos
     assert(EV.cols() == ne);
 
     // workspace for subspace construction
-    std::cout << "input matrix has dimensions " << N << std::endl;
-    std::cout << "V has dims " << N << "*" << m << std::endl;
     Matrix<real> V(N,m);
 
     // storage for tridiagonal matrix
@@ -78,8 +76,7 @@ bool lanczos
 
     // main loop, will terminate earlier if tolerance is reached
     bool converged = false;
-    for(int j=1; j<min(m, N) && !converged; ++j) {
-        //std::cout << "================= ITERATION " << j << "    ";
+    for(int j=1; j<std::min(m, N) && !converged; ++j) {
         if ( j == 1 )
             w -= delta*V(all,j-1);
         else
@@ -127,8 +124,8 @@ bool lanczos
                 r(all) = A*EV(all,count);
 
                 // compute the relative error from the residual
-                real this_err = abs( norm(r-this_eig*EV(all,count)) / this_eig );
-                max_err = max(max_err, this_err);
+                real this_err = std::fabs( norm(r-this_eig*EV(all,count)) / this_eig );
+                max_err = std::max(max_err, this_err);
 
                 // terminate early if the current error exceeds the tolerance
                 if(max_err > tol)

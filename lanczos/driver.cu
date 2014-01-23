@@ -2,6 +2,10 @@
 #include <limits>
 #include <vector>
 
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP && THRUST_HOST_SYSTEM==THRUST_HOST_SYSTEM_OMP
+#define THRUST_NO_GPU
+#endif
+
 typedef double ScalarType;
 
 // include mkl blas implementations
@@ -26,15 +30,17 @@ typedef MatrixXX GenericMatrix;
 #else
 
 // include minlin stuff
+#include "tge_wrappers.h"
+#include "lanczos.h"
+
 #include <minlin/minlin.h>
 #include <minlin/modules/threx/threx.h>
 using namespace minlin::threx; // just dump the namespace for this example
-#include "tge_wrappers.h"
-#include "lanczos.h"
-// include cuda blas implementation
-#include <cublas_v2.h>
 
 MINLIN_INIT
+#ifndef THRUST_NO_GPU
+#include <cublas_v2.h>
+#endif
 
 #endif
 
@@ -49,7 +55,7 @@ int main(int argc, char* argv[])
     Params params(argc-1, argv+1);
     params.print();
 
-    #ifdef USE_GPU
+    #ifndef THRUST_NO_GPU
     // force initialization of cublas, so that the intialization over head doesn't turn up
     // in the lanczos routine
     cublasHandle_t handle = CublasState::instance()->handle();

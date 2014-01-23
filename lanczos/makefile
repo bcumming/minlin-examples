@@ -1,11 +1,21 @@
 all : driver
 
 # set up system-specific settings
+# MONCH
+SCRATCH=/mnt/lnec/bcumming
+EIGENROOT=/users/wsawyer/Software/USI_COMPRESSION/usi_compression/cxx/eigen
+MINLINROOT=$(SCRATCH)/minlin/include
+MKLROOT=/apps/monch/intel/14.0.1/mkl/
+GPP=/apps/monch/gcc/4.8.1/bin/g++
+BOOSTROOT=/apps/monch/boost/1.54.0/openmpi-1.7.2_icc-14.0/include
+ARGS=-g -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
+
 # greina
 MINLINROOT=/users/bcumming/github/minlin/include
 MKLROOT=/cm/shared/apps/intel/composer_xe/2011_sp1.12.361/mkl
 GPP=/cm/shared/apps/gcc/4.7.1/bin/g++
 BOOSTROOT=/users/bcumming/repos/boost_1_49_0
+ARGS=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 
 # SANTIS
 EIGENROOT=/users/wsawyer/Software/USI_COMPRESSION/usi_compression/cxx/eigen
@@ -13,15 +23,17 @@ MINLINROOT=/scratch/santis/bcumming/github/minlin/include
 MKLROOT=/opt/intel/13.1.0.146/composer_xe_2013.2.146/mkl
 GPP=/opt/gcc/4.8.1/bin/g++
 BOOSTROOT=/apps/daint/boost/1.54.0/gnu_473/include
+ARGS=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+
 
 MKLLIBS=-L$(MKLROOT)/lib/intel64 -lmkl_gnu_thread -lmkl_core -lmkl_rt
 CUDALIBS=-lcublas
-LIBS=$(MKLLIBS) $(CUDALIBS)
+LIBS=$(MKLLIBS)
 
 INCLUDE=-I$(MINLINROOT) -I$(MKLROOT)/include -I$(BOOSTROOT) -I$(EIGENROOT)
 
-ARGS=-g
-#ARGS=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+driver_monch: driver.cu utilities.h tge_wrappers.h lanczos.h
+	g++ driver.cpp mmio.cpp -o driver_monch -fopenmp -O3 $(INCLUDE) $(LIBS) $(ARGS) -I/mnt/lnec/bcumming/thrust -std=c++11
 
 driver: driver.cu utilities.h tge_wrappers.h lanczos.h
 	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver -ccbin=$(GPP) --compiler-options "-fopenmp" $(INCLUDE) $(LIBS) $(ARGS) -DUSE_GPU
