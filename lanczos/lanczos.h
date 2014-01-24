@@ -67,12 +67,15 @@ bool lanczos
     V(all,0) /= norm(V(all,0));    // Unit vector
 
     // find product w=A*V(:,0)
-    Vector w = A*V(all,0);
+    Vector w(N);
+    w = A*V(all,0);
+    w = A*V(all,0);
+
     delta = dot(w, V(all,0));
     T(0,0) = delta; // store in tridiagonal matrix
 
     // preallocate residual storage vector
-    Vector r(A.rows());
+    Vector r(N);
 
     // main loop, will terminate earlier if tolerance is reached
     bool converged = false;
@@ -106,10 +109,16 @@ bool lanczos
 
         if ( j >= ne ) {
             // find eigenvectors/eigenvalues for the reduced triangular system
+            //std::cout << "---------------------------------------" << j << std::endl;
+#ifdef FULL_EIGENSOLVE
             HostMatrix<real> Tsub = T(0,j,0,j);
             HostMatrix<real> UVhost(j+1,ne);
             assert( geev<real>(Tsub, UVhost, er, ei, ne) );
-
+#else
+            HostMatrix<real> Tsub = T(0,j,0,j);
+            HostMatrix<real> UVhost(j+1,ne);
+            assert( steigs( Tsub.pointer(), UVhost.pointer(), er.pointer(), j+1, ne) );
+#endif
             // copy eigenvectors for reduced system to the device
             Matrix<real> UV = UVhost;
 
@@ -131,7 +140,7 @@ bool lanczos
                 if(max_err > tol)
                     break;
             } // end-for error estimation
-            std::cout << "iteration : " << j << ", error : " << max_err << std::endl;
+            //std::cout << "iteration : " << j << ", error : " << max_err << std::endl;
             // test for convergence
             if(max_err < tol)
                 converged = true;

@@ -23,8 +23,8 @@ MINLINROOT=/scratch/santis/bcumming/github/minlin/include
 MKLROOT=/opt/intel/13.1.0.146/composer_xe_2013.2.146/mkl
 GPP=/opt/gcc/4.8.1/bin/g++
 BOOSTROOT=/apps/daint/boost/1.54.0/gnu_473/include
-ARGS=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-
+ARGS=-g
+#ARGS=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 
 MKLLIBS=-L$(MKLROOT)/lib/intel64 -lmkl_gnu_thread -lmkl_core -lmkl_rt
 CUDALIBS=-lcublas
@@ -32,20 +32,18 @@ LIBS=$(MKLLIBS)
 
 INCLUDE=-I$(MINLINROOT) -I$(MKLROOT)/include -I$(BOOSTROOT) -I$(EIGENROOT)
 
-driver_monch: driver.cu utilities.h tge_wrappers.h lanczos.h
-	g++ driver.cpp mmio.cpp -o driver_monch -fopenmp -O3 $(INCLUDE) $(LIBS) $(ARGS) -I/mnt/lnec/bcumming/thrust -std=c++11
-
 driver: driver.cu utilities.h tge_wrappers.h lanczos.h
-	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver -ccbin=$(GPP) --compiler-options "-fopenmp" $(INCLUDE) $(LIBS) $(ARGS) -DUSE_GPU
-#	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver -ccbin=$(GPP) --compiler-options "-fopenmp -pg" $(INCLUDE) $(LIBS) $(ARGS)
+	nvcc -arch=sm_35 -O3 driver.cu mmio.cpp -o driver -ccbin=$(GPP) --compiler-options "-fopenmp -O3" $(INCLUDE) $(LIBS) $(ARGS) -DUSE_GPU $(CUDALIBS)
 
 driver_host: driver.cu utilities.h tge_wrappers.h lanczos.h
-	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver_host -ccbin=$(GPP) --compiler-options "-fopenmp -O3 -pg" $(INCLUDE) $(LIBS) $(ARGS)
-#	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver -ccbin=$(GPP) --compiler-options "-fopenmp -pg" $(INCLUDE) $(LIBS) $(ARGS)
+	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver_host -ccbin=$(GPP) --compiler-options "-fopenmp -O3" $(INCLUDE) $(LIBS) $(ARGS) $(CUDALIBS) -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 
 driver_eigen: driver.cpp driver.cu utilities.h lanczos_eigen.h
 	g++ -O3 driver.cpp mmio.cpp -o driver_eigen -fopenmp -pg -DEIGEN $(INCLUDE) $(EIGENLIBS) $(ARGS) -I/opt/nvidia/cudatoolkit/5.5.20-1.0501.7700.8.1/include/
 
+driver_gcc: driver.cu utilities.h tge_wrappers.h lanczos.h
+	g++ driver.cpp mmio.cpp -o driver_gcc -fopenmp -O3 $(INCLUDE) $(LIBS) $(ARGS) -I/scratch/santis/bcumming/github/thrust -std=c++11 -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP -D__host__=" " -D__device__=" "
+
 clean :
-	rm -f driver driver_host driver_eigen
+	rm -f driver driver_host driver_eigen driver_gcc
 
