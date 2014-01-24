@@ -26,15 +26,17 @@ typedef MatrixXX GenericMatrix;
 #else
 
 // include minlin stuff
+#include "tge_wrappers.h"
+#include "lanczos.h"
+
 #include <minlin/minlin.h>
 #include <minlin/modules/threx/threx.h>
 using namespace minlin::threx; // just dump the namespace for this example
-#include "tge_wrappers.h"
-#include "lanczos.h"
-// include cuda blas implementation
-#include <cublas_v2.h>
 
+#if THRUST_DEVICE_SYSTEM != THRUST_DEVICE_SYSTEM_OMP
 MINLIN_INIT
+#include <cublas_v2.h>
+#endif
 
 #endif
 
@@ -49,11 +51,11 @@ int main(int argc, char* argv[])
     Params params(argc-1, argv+1);
     params.print();
 
-    #ifdef USE_GPU
+#if THRUST_DEVICE_SYSTEM != THRUST_DEVICE_SYSTEM_OMP
     // force initialization of cublas, so that the intialization over head doesn't turn up
     // in the lanczos routine
     cublasHandle_t handle = CublasState::instance()->handle();
-    #endif
+#endif
 
     // load matrix from file
     mm_matrix<ScalarType> mat(params.fname);
@@ -90,11 +92,20 @@ int main(int argc, char* argv[])
 
     // call lanczos routine
 
-    double time = -omp_get_wtime();
 #if defined( EIGEN )
+    // a first run to remove any MKL initialization overheads
+    lanczos_eigen(A, params.num_eigs, params.iters, 100, eigs, V, params.reorthogonalize);
+
+    double time = -omp_get_wtime();
     bool success = lanczos_eigen(A, params.num_eigs, params.iters, params.tol, eigs, V, params.reorthogonalize);
 #else
+    // a first run to remove any MKL initialization overheads
+    lanczos(A, params.num_eigs, params.iters, 100., eigs, V, params.reorthogonalize);
+
+    //cudaDeviceSynchronize();
+    double time = -omp_get_wtime();
     bool success = lanczos(A, params.num_eigs, params.iters, params.tol, eigs, V, params.reorthogonalize);
+    //cudaDeviceSynchronize();
 #endif
     time += omp_get_wtime();
     std::cout << "======= took " << time*1000. << " miliseconds" << std::endl;

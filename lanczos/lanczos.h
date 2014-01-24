@@ -6,7 +6,7 @@
 using namespace minlin::threx; // just dump the namespace for this example
 
 // include cuda and mkl blas implementations
-#include <cublas_v2.h>
+//#include <cublas_v2.h>
 #include <mkl.h>
 
 #include "utilities.h"
@@ -51,8 +51,6 @@ bool lanczos
     assert(EV.cols() == ne);
 
     // workspace for subspace construction
-    std::cout << "input matrix has dimensions " << N << std::endl;
-    std::cout << "V has dims " << N << "*" << m << std::endl;
     Matrix<real> V(N,m);
 
     // storage for tridiagonal matrix
@@ -69,17 +67,19 @@ bool lanczos
     V(all,0) /= norm(V(all,0));    // Unit vector
 
     // find product w=A*V(:,0)
-    Vector w = A*V(all,0);
+    Vector w(N);
+    w = A*V(all,0);
+    w = A*V(all,0);
+
     delta = dot(w, V(all,0));
     T(0,0) = delta; // store in tridiagonal matrix
 
     // preallocate residual storage vector
-    Vector r(A.rows());
+    Vector r(N);
 
     // main loop, will terminate earlier if tolerance is reached
     bool converged = false;
-    for(int j=1; j<min(m, N) && !converged; ++j) {
-        //std::cout << "================= ITERATION " << j << "    ";
+    for(int j=1; j<std::min(m, N) && !converged; ++j) {
         if ( j == 1 )
             w -= delta*V(all,j-1);
         else
@@ -109,10 +109,16 @@ bool lanczos
 
         if ( j >= ne ) {
             // find eigenvectors/eigenvalues for the reduced triangular system
+            //std::cout << "---------------------------------------" << j << std::endl;
+#ifdef FULL_EIGENSOLVE
             HostMatrix<real> Tsub = T(0,j,0,j);
             HostMatrix<real> UVhost(j+1,ne);
             assert( geev<real>(Tsub, UVhost, er, ei, ne) );
-
+#else
+            HostMatrix<real> Tsub = T(0,j,0,j);
+            HostMatrix<real> UVhost(j+1,ne);
+            assert( steigs( Tsub.pointer(), UVhost.pointer(), er.pointer(), j+1, ne) );
+#endif
             // copy eigenvectors for reduced system to the device
             Matrix<real> UV = UVhost;
 
@@ -127,14 +133,14 @@ bool lanczos
                 r(all) = A*EV(all,count);
 
                 // compute the relative error from the residual
-                real this_err = abs( norm(r-this_eig*EV(all,count)) / this_eig );
-                max_err = max(max_err, this_err);
+                real this_err = std::fabs( norm(r-this_eig*EV(all,count)) / this_eig );
+                max_err = std::max(max_err, this_err);
 
                 // terminate early if the current error exceeds the tolerance
                 if(max_err > tol)
                     break;
             } // end-for error estimation
-            std::cout << "iteration : " << j << ", error : " << max_err << std::endl;
+            //std::cout << "iteration : " << j << ", error : " << max_err << std::endl;
             // test for convergence
             if(max_err < tol)
                 converged = true;
