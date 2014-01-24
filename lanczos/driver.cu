@@ -16,7 +16,7 @@ typedef double ScalarType;
 #if defined(EIGEN)
 
 // include eigen stuff
-#include <Eigen/Dense>
+#include "Eigen/Dense"
 using namespace Eigen;
 typedef Matrix<ScalarType, Dynamic, Dynamic, ColMajor> MatrixXX;
 typedef Matrix<ScalarType, Dynamic, 1> VectorX;
@@ -61,6 +61,7 @@ int main(int argc, char* argv[])
     mat.stats();
 
 #if defined( EIGEN )
+    Eigen::initParallel();
     // initilize eigen implementation
     MatrixXX A( mat.rows(), mat.cols() );
     mat.to_dense( A.data(), false );

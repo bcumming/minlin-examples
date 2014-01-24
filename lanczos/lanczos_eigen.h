@@ -41,6 +41,7 @@ bool lanczos_eigen
     assert(N         >= m);
 
     // workspace for subspace construction
+    std::cout << "EIGEN threads " << Eigen::nbThreads() << std::endl;
     std::cout << "input matrix has dimensions " << N << std::endl;
     std::cout << "V has dims " << N << "*" << m << std::endl;
     MatrixXX V(N,m);

@@ -32,7 +32,7 @@ driver_host: driver.cu utilities.h tge_wrappers.h lanczos.h
 #	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver -ccbin=$(GPP) --compiler-options "-fopenmp -pg" $(INCLUDE) $(LIBS) $(ARGS)
 
 driver_eigen: driver.cpp driver.cu utilities.h lanczos_eigen.h
-	g++ -O3 driver.cpp mmio.cpp -o driver_eigen -fopenmp -pg -DEIGEN $(INCLUDE) $(EIGENLIBS) $(ARGS) -I/opt/nvidia/cudatoolkit/5.5.20-1.0501.7700.8.1/include/
+	g++ -O3 driver.cpp mmio.cpp -o driver_eigen -fopenmp -pg -DEIGEN -DEIGEN_USE_MKL_ALL $(INCLUDE) $(EIGENLIBS) $(ARGS) -I/opt/nvidia/cudatoolkit/5.5.20-1.0501.7700.8.1/include/
 
 clean :
 	rm -f driver driver_host driver_eigen
