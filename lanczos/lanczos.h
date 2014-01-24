@@ -91,11 +91,14 @@ bool lanczos
         // reorthogonalize
         if( reorthogonalize ) {
             for( int jj = 0; jj < j; ++jj )  {
+#if defined( USE_GPU )
                 real *Vjj = V.pointer() + jj*N;
                 real *Vj  = V.pointer() +  j*N;
-                //real alpha =  dot( V(all,jj), V(all,j) );
                 real alpha;
                 cublasDdot(CublasState::instance()->handle(), N, Vjj, 1, Vj , 1, &alpha);
+#else
+                real alpha =  dot( V(all,jj), V(all,j) );
+#endif
                 V(all,j) -= alpha * V(all,jj);
             }
         }
