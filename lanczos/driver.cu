@@ -21,6 +21,7 @@ using namespace Eigen;
 typedef Matrix<ScalarType, Dynamic, Dynamic, ColMajor> MatrixXX;
 typedef Matrix<ScalarType, Dynamic, 1> VectorX;
 typedef MatrixXX GenericMatrix;
+#include "generic_wrappers.h"
 #include "lanczos_eigen.h"
 
 #else
@@ -94,10 +95,10 @@ int main(int argc, char* argv[])
 
 #if defined( EIGEN )
     // a first run to remove any MKL initialization overheads
-    lanczos_eigen(A, params.num_eigs, params.iters, 100, eigs, V, params.reorthogonalize);
-
+    bool success;
+    success = lanczos_eigen<ScalarType>(A, params.num_eigs, params.iters, 10, eigs, V, params.reorthogonalize);
     double time = -omp_get_wtime();
-    bool success = lanczos_eigen(A, params.num_eigs, params.iters, params.tol, eigs, V, params.reorthogonalize);
+    success = lanczos_eigen<ScalarType>(A, params.num_eigs, params.iters, params.tol, eigs, V, params.reorthogonalize);
 #else
     // a first run to remove any MKL initialization overheads
     lanczos(A, params.num_eigs, params.iters, 100., eigs, V, params.reorthogonalize);

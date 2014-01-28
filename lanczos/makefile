@@ -1,4 +1,4 @@
-all : driver
+all : driver driver_gcc driver_eigen
 
 # set up system-specific settings
 # MONCH
@@ -39,10 +39,10 @@ driver_host: driver.cu utilities.h tge_wrappers.h lanczos.h
 	nvcc -arch=sm_35 driver.cu mmio.cpp -o driver_host -ccbin=$(GPP) --compiler-options "-fopenmp -O3" $(INCLUDE) $(LIBS) $(ARGS) $(CUDALIBS) -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP
 
 driver_eigen: driver.cpp driver.cu utilities.h lanczos_eigen.h
-	g++ -O3 driver.cpp mmio.cpp -o driver_eigen -fopenmp -pg -DEIGEN -DEIGEN_USE_MKL_ALL $(INCLUDE) $(EIGENLIBS) $(ARGS) -I/opt/nvidia/cudatoolkit/5.5.20-1.0501.7700.8.1/include/
+	g++ -O3 driver.cpp mmio.cpp -o driver_eigen -fopenmp -pg -DEIGEN -DEIGEN_USE_MKL_ALL -DFULL_EIGENSOLVE $(INCLUDE) $(LIBS) $(EIGENLIBS) $(ARGS) -I/opt/nvidia/cudatoolkit/5.5.20-1.0501.7700.8.1/include/
 
 driver_gcc: driver.cu utilities.h tge_wrappers.h lanczos.h
-	g++ driver.cpp mmio.cpp -o driver_gcc -fopenmp -O3 $(INCLUDE) $(LIBS) $(ARGS) -I/scratch/santis/bcumming/github/thrust -std=c++11 -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP -D__host__=" " -D__device__=" "
+	g++ driver.cpp mmio.cpp -o driver_gcc -fopenmp -O3 -pg $(INCLUDE) $(LIBS) $(ARGS) -I/scratch/santis/bcumming/github/thrust -std=c++11 -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -DTHRUST_HOST_SYSTEM=THRUST_HOST_SYSTEM_OMP -D__host__=" " -D__device__=" "
 
 clean :
 	rm -f driver driver_host driver_eigen driver_gcc

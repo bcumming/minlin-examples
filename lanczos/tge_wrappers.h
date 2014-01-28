@@ -3,6 +3,8 @@
 #include <omp.h>
 
 #include <mkl.h>
+
+#include <mkl.h>
 #include <minlin/minlin.h>
 #include <minlin/modules/threx/threx.h>
 using namespace minlin::threx; // just dump the namespace for this example
@@ -186,4 +188,3 @@ bool geev (
     // return bool indicating whether we were successful
     return result==0; // LAPACKE_dgeev() returns 0 on success
 }
-

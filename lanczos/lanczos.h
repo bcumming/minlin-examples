@@ -1,10 +1,5 @@
 #pragma once
 
-// include minlin stuff
-#include <minlin/minlin.h>
-#include <minlin/modules/threx/threx.h>
-using namespace minlin::threx; // just dump the namespace for this example
-
 // include cuda and mkl blas implementations
 //#include <cublas_v2.h>
 #include <mkl.h>
@@ -117,13 +112,11 @@ bool lanczos
         if ( j >= ne ) {
             // find eigenvectors/eigenvalues for the reduced triangular system
             //std::cout << "---------------------------------------" << j << std::endl;
-#ifdef FULL_EIGENSOLVE
             HostMatrix<real> Tsub = T(0,j,0,j);
             HostMatrix<real> UVhost(j+1,ne);
+#ifdef FULL_EIGENSOLVE
             assert( geev<real>(Tsub, UVhost, er, ei, ne) );
 #else
-            HostMatrix<real> Tsub = T(0,j,0,j);
-            HostMatrix<real> UVhost(j+1,ne);
             assert( steigs( Tsub.pointer(), UVhost.pointer(), er.pointer(), j+1, ne) );
 #endif
             // copy eigenvectors for reduced system to the device

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <omp.h>
+#include <mkl.h>
 
 #include <Eigen/Dense>
 using namespace Eigen;
@@ -41,9 +42,9 @@ bool lanczos_eigen
     assert(N         >= m);
 
     // workspace for subspace construction
-    std::cout << "EIGEN threads " << Eigen::nbThreads() << std::endl;
-    std::cout << "input matrix has dimensions " << N << std::endl;
-    std::cout << "V has dims " << N << "*" << m << std::endl;
+    // std::cout << "EIGEN threads " << Eigen::nbThreads() << std::endl;
+    // std::cout << "input matrix has dimensions " << N << std::endl;
+    // std::cout << "V has dims " << N << "*" << m << std::endl;
     MatrixXX V(N,m);
 
     // storage for tridiagonal matrix
@@ -96,20 +97,27 @@ bool lanczos_eigen
         // update diagonal of tridiagonal system
         delta = w.transpose() * V.col(j);
         T(j, j) = delta;
-
         if ( j >= ne ) {
             // find eigenvectors/eigenvalues for the reduced triangular system
+#ifdef FULL_EIGENSOLVE
 	    SelfAdjointEigenSolver<MatrixXX> eigensolver(T.block(0,0,j+1,j+1));
 	    if (eigensolver.info() != Success) abort();
 	    VectorX  eigs = eigensolver.eigenvalues().block(j+1-ne,0,ne,1);  // ne largest Ritz values, sorted ascending
 	    MatrixXX UT = eigensolver.eigenvectors();   // Ritz vectors
-
             // std::cout << "iteration : " << j << ", Tblock : " << T.block(0,0,j+1,j+1) << std::endl;
             // std::cout << "iteration : " << j << ", ritz values " << eigs << std::endl;
             // std::cout << "iteration : " << j << ", ritz vectors " << UT << std::endl;
             // j or j+1 ??
-
 	    EV = V.block(0,0,N,j+1)*UT.block(0,j+1-ne,j+1,ne);  // Eigenvector approximations for largest ne eigenvalues
+#else
+            MatrixXX Tsub = T.block(0,0,j+1,j+1);
+	    VectorX  eigs(j+1);
+            MatrixXX UT(j+1,ne);
+            assert( steigs( Tsub.data(), UT.data(), eigs.data(), j+1, ne) );
+            EV = V.block(0,0,N,j+1)*UT.block(0,0,j+1,ne);
+#endif
+
+
 
             // copy eigenvectors for reduced system to the device
             ////////////////////////////////////////////////////////////////////
@@ -135,7 +143,7 @@ bool lanczos_eigen
                 if(max_err > tol)
                     break;
             } // end-for error estimation
-            std::cout << "iteration : " << j << ", max_err : " << max_err << std::endl;
+            // std::cout << "iteration : " << j << ", max_err : " << max_err << std::endl;
             // test for convergence
             if(max_err < tol) {
 	      // pack the eigenvalues into user-provided vector
